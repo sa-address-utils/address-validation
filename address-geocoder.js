@@ -123,51 +123,19 @@ async function findAddress(street, suburb) {
   return null;
 }
 
-function initializeMap() {
-  document.getElementById('map').classList.remove('hidden');
-  
-  if (map) map.remove();
-  
+function checkEligibility(coords) {
   const targetWard = window.TARGET_WARD || '56';
   const wardKey = `ward${targetWard}`;
   const boundaries = window.WARD_BOUNDARIES[wardKey];
   
   if (!boundaries) {
     console.error(`No boundaries found for ward ${targetWard}`);
-    return;
+    return false;
   }
   
-  // Calculate center of ward boundaries
-  const lats = boundaries.map(coord => coord[0]);
-  const lngs = boundaries.map(coord => coord[1]);
-  const wardCenter = [
-    (Math.min(...lats) + Math.max(...lats)) / 2,
-    (Math.min(...lngs) + Math.max(...lngs)) / 2
-  ];
-  
-  map = L.map('map').setView(wardCenter, 13);
-  
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map);
-  
-  const polygon = L.polygon(boundaries, {
-    color: '#4CAF50',
-    fillColor: '#4CAF50',
-    fillOpacity: 0.2,
-    weight: 3
-  }).addTo(map);
-  
-  addMapLegend();
-  map.fitBounds(polygon.getBounds().pad(0.1));
-  
-  if (homeLocation) addHomeMarker();
-  
-  // Scroll to map after it's fully loaded
-  map.whenReady(() => {
-    scrollToMap();
-  });
+  return isPointInPolygon(coords, boundaries);
 }
+
 
 function displayResults(location, eligible) {
   const resultEl = document.getElementById('addressResult');
