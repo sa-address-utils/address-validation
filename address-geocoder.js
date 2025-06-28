@@ -124,7 +124,7 @@ async function findAddress(street, suburb) {
 }
 
 function checkEligibility(coords) {
-  const targetWard = window.TARGET_WARD || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
   const wardKey = `ward${targetWard}`;
   const boundaries = window.WARD_BOUNDARIES[wardKey];
   
@@ -140,7 +140,7 @@ function displayResults(location, eligible) {
   const resultEl = document.getElementById('addressResult');
   if (!resultEl) return;
   
-  const targetWard = window.TARGET_WARD || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
   
   resultEl.innerHTML = `
     <div class="address-result">
@@ -207,7 +207,7 @@ async function submitForm(data) {
 
 function showFinalStatus(eligible) {
   const btn = document.getElementById('checkAddressBtn');
-  const targetWard = window.TARGET_WARD || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
   
   if (eligible === true) {
     showStatus('✅ Eligibility confirmed!', 'success');
@@ -229,7 +229,7 @@ function initializeMap() {
   
   if (map) map.remove();
   
-  const targetWard = window.TARGET_WARD || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
   const wardKey = `ward${targetWard}`;
   const boundaries = window.WARD_BOUNDARIES[wardKey];
   
@@ -273,7 +273,7 @@ function initializeMap() {
 function addHomeMarker() {
   if (!homeLocation) return;
   
-  const targetWard = window.TARGET_WARD || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
   const wardKey = `ward${targetWard}`;
   const boundaries = window.WARD_BOUNDARIES[wardKey];
   
@@ -309,7 +309,7 @@ function addHomeMarker() {
 
 function addMapLegend() {
   const legend = L.control({position: 'bottomright'});
-  const targetWard = window.TARGET_WARD || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
   
   legend.onAdd = function(map) {
     const div = L.DomUtil.create('div', 'legend');
