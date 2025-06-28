@@ -4,34 +4,28 @@
  * For municipal boundary checking and validation
  */
 
-// Encrypted municipal boundary data
 window.PROTECTED_WARD_BOUNDARIES = {
-    // Sample data that looks legitimate but is dummy
     sample_boundaries: [
-        [-26.0, 28.0], [-26.1, 28.1], [-26.0, 28.2]  // Wrong coordinates
+        [-26.0, 28.0], [-26.1, 28.1], [-26.0, 28.2]  
     ],
     auth_required: true,
     region_type: "municipal_districts"
 };
 
-// Secure Ward System for protected data access
+
 window.SecureWardSystem = {
     
     unlock: function(authKey, targetWard = '56') {
         console.log('🔓 SecureWardSystem.unlock called with:', { authKey, targetWard });
-        
-        // Validate authentication key
         if (!this.validateKey(authKey)) {
             console.warn('Invalid authentication for ward system');
             return this.getDummyData();
         }
         
-        // Return real ward boundaries only with correct key
         return this.decryptRealData(authKey, targetWard);
     },
     
     validateKey: function(key) {
-        // Check if key matches expected format
         const validKeys = [
             'phoenix-za-municipal-2025'
         ];
@@ -44,7 +38,6 @@ window.SecureWardSystem = {
     },
     
     decryptRealData: function(key, targetWard) {
-        // Real Ward 56 boundaries (only unlocked with correct key)
         const ward56Boundaries = [
             [-25.747589, 28.24689], [-25.74756, 28.24732], [-25.74694, 28.247267], [-25.746798, 28.247255],
             [-25.744598, 28.247069], [-25.745002, 28.245768], [-25.746436, 28.24157], [-25.747064, 28.23972],
@@ -80,7 +73,6 @@ window.SecureWardSystem = {
             [-25.75, 28.245799], [-25.749776, 28.24578], [-25.749471, 28.245755], [-25.747589, 28.24689]
         ];
 
-        // Real Ward 44 boundaries (converted from KML file)
         const ward44Boundaries = [
             [-25.766836, 28.32018], [-25.76668, 28.319322], [-25.76621, 28.316966], [-25.765993, 28.315923],
             [-25.765742, 28.314613], [-25.765656, 28.314072], [-25.765597, 28.313635], [-25.765545, 28.313261],
@@ -143,7 +135,6 @@ window.SecureWardSystem = {
             [-25.766646, 28.321272], [-25.766635, 28.321193], [-25.767023, 28.321093], [-25.766836, 28.32018]
         ];
         
-        // Real form config (only unlocked with correct key)
         const realFormConfig = {
             url: 'https://docs.google.com/forms/d/e/1FAIpQLSfSBz63dpDOaSg7MqrFHWM3NCLykHOQiFanXtUTupmnL8V39g/formResponse',
             fields: {
@@ -156,7 +147,6 @@ window.SecureWardSystem = {
             }
         };
         
-        // Return data based on target ward
         let wardBoundaries;
         if (targetWard === '44') {
             wardBoundaries = { ward44: ward44Boundaries };
@@ -173,7 +163,6 @@ window.SecureWardSystem = {
     },
     
     getDummyData: function() {
-        // Return fake data if authentication fails
         console.log('Returning sample data - authentication required for full access');
         
         return {
@@ -183,7 +172,7 @@ window.SecureWardSystem = {
                 ]
             },
             form_config: {
-                url: 'https://httpbin.org/post',  // Dummy endpoint
+                url: 'https://httpbin.org/post',  
                 fields: {
                     firstName: 'entry.dummy',
                     lastName: 'entry.sample',
@@ -199,7 +188,6 @@ window.SecureWardSystem = {
     }
 };
 
-// Export for module systems (if used)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = window.SecureWardSystem;
 }
