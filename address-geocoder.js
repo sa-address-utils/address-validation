@@ -156,20 +156,10 @@ function displayResults(location, eligible) {
   
   if (map) {
     addHomeMarker();
+    scrollToMap();
   } else {
     initializeMap();
   }
-  
-  // Auto-scroll to map after a short delay to ensure it's rendered
-  setTimeout(() => {
-    const mapElement = document.getElementById('map');
-    if (mapElement) {
-      mapElement.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
-      });
-    }
-  }, 500);
 }
 
 function displayNoResults(data) {
@@ -273,6 +263,11 @@ function initializeMap() {
   map.fitBounds(polygon.getBounds().pad(0.1));
   
   if (homeLocation) addHomeMarker();
+  
+  // Scroll to map after it's fully loaded
+  map.whenReady(() => {
+    scrollToMap();
+  });
 }
 
 function addHomeMarker() {
@@ -356,6 +351,18 @@ function isPointInPolygon(point, polygon) {
   }
   
   return inside;
+}
+
+function scrollToMap() {
+  setTimeout(() => {
+    const mapElement = document.getElementById('map');
+    if (mapElement && !mapElement.classList.contains('hidden')) {
+      mapElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+    }
+  }, 1000);
 }
 
 // Export for module systems (if used)
