@@ -123,26 +123,50 @@ async function findAddress(street, suburb) {
   return null;
 }
 
-function checkEligibility(coords) {
-  const targetWard = window.TARGET_WARD || '56';
-  let boundaries;
+function initializeMap() {
+  document.getElementById('map').classList.remove('hidden');
   
-  // Handle both old Ward 56 format and new multi-ward format
-  if (window.WARD_BOUNDARIES.ward56 && !window.WARD_BOUNDARIES.ward44) {
-    // Old Ward 56 only format
-    boundaries = window.WARD_BOUNDARIES.ward56;
-  } else {
-    // New multi-ward format
-    const wardKey = `ward${targetWard}`;
-    boundaries = window.WARD_BOUNDARIES[wardKey];
-  }
+  if (map) map.remove();
+  
+  const targetWard = window.TARGET_WARD || '56';
+  const wardKey = `ward${targetWard}`;
+  const boundaries = window.WARD_BOUNDARIES[wardKey];
   
   if (!boundaries) {
     console.error(`No boundaries found for ward ${targetWard}`);
-    return false;
+    return;
   }
   
-  return isPointInPolygon(coords, boundaries);
+  // Calculate center of ward boundaries
+  const lats = boundaries.map(coord => coord[0]);
+  const lngs = boundaries.map(coord => coord[1]);
+  const wardCenter = [
+    (Math.min(...lats) + Math.max(...lats)) / 2,
+    (Math.min(...lngs) + Math.max(...lngs)) / 2
+  ];
+  
+  map = L.map('map').setView(wardCenter, 13);
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  
+  const polygon = L.polygon(boundaries, {
+    color: '#4CAF50',
+    fillColor: '#4CAF50',
+    fillOpacity: 0.2,
+    weight: 3
+  }).addTo(map);
+  
+  addMapLegend();
+  map.fitBounds(polygon.getBounds().pad(0.1));
+  
+  if (homeLocation) addHomeMarker();
+  
+  // Scroll to map after it's fully loaded
+  map.whenReady(() => {
+    scrollToMap();
+  });
 }
 
 function displayResults(location, eligible) {
@@ -239,17 +263,8 @@ function initializeMap() {
   if (map) map.remove();
   
   const targetWard = window.TARGET_WARD || '56';
-  let boundaries;
-  
-  // Handle both old Ward 56 format and new multi-ward format
-  if (window.WARD_BOUNDARIES.ward56 && !window.WARD_BOUNDARIES.ward44) {
-    // Old Ward 56 only format
-    boundaries = window.WARD_BOUNDARIES.ward56;
-  } else {
-    // New multi-ward format
-    const wardKey = `ward${targetWard}`;
-    boundaries = window.WARD_BOUNDARIES[wardKey];
-  }
+  const wardKey = `ward${targetWard}`;
+  const boundaries = window.WARD_BOUNDARIES[wardKey];
   
   if (!boundaries) {
     console.error(`No boundaries found for ward ${targetWard}`);
@@ -292,17 +307,8 @@ function addHomeMarker() {
   if (!homeLocation) return;
   
   const targetWard = window.TARGET_WARD || '56';
-  let boundaries;
-  
-  // new multi-ward format
-  if (window.WARD_BOUNDARIES.ward56 && !window.WARD_BOUNDARIES.ward44) {
-    // Old Ward 56 only format
-    boundaries = window.WARD_BOUNDARIES.ward56;
-  } else {
-    // New multi-ward format
-    const wardKey = `ward${targetWard}`;
-    boundaries = window.WARD_BOUNDARIES[wardKey];
-  }
+  const wardKey = `ward${targetWard}`;
+  const boundaries = window.WARD_BOUNDARIES[wardKey];
   
   if (!boundaries) {
     console.error(`No boundaries found for ward ${targetWard}`);
