@@ -7,14 +7,13 @@
 // Application state
 let map, homeMarker, homeLocation = null;
 
+// Initialize when called by authenticated system
 function initializeApp() {
   // Verify dependencies are loaded
   if (!window.WARD_BOUNDARIES || !window.FORM_CONFIG) {
     console.error('Required dependencies not loaded');
     return;
   }
-  
-  console.log(`Ward boundary system initialized successfully for Ward ${window.TARGET_WARD || '56'}`);
   
   // Add event listeners
   const btn = document.getElementById('checkAddressBtn');
@@ -128,11 +127,6 @@ function checkEligibility(coords) {
   const targetWard = window.TARGET_WARD || '56';
   const wardKey = `ward${targetWard}`;
   const boundaries = window.WARD_BOUNDARIES[wardKey];
-  
-  console.log('🔍 Checking eligibility for ward:', targetWard);
-  console.log('🔍 Available boundaries:', Object.keys(window.WARD_BOUNDARIES));
-  console.log('🔍 Looking for key:', wardKey);
-  console.log('🔍 Found boundaries:', boundaries ? 'Yes' : 'No');
   
   if (!boundaries) {
     console.error(`No boundaries found for ward ${targetWard}`);
