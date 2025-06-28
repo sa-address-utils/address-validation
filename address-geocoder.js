@@ -7,7 +7,6 @@
 // Application state
 let map, homeMarker, homeLocation = null;
 
-// Initialize when called by authenticated system
 function initializeApp() {
   // Verify dependencies are loaded
   if (!window.WARD_BOUNDARIES || !window.FORM_CONFIG) {
