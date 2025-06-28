@@ -125,8 +125,17 @@ async function findAddress(street, suburb) {
 
 function checkEligibility(coords) {
   const targetWard = window.TARGET_WARD || '56';
-  const wardKey = `ward${targetWard}`;
-  const boundaries = window.WARD_BOUNDARIES[wardKey];
+  let boundaries;
+  
+  // Handle both old Ward 56 format and new multi-ward format
+  if (window.WARD_BOUNDARIES.ward56 && !window.WARD_BOUNDARIES.ward44) {
+    // Old Ward 56 only format
+    boundaries = window.WARD_BOUNDARIES.ward56;
+  } else {
+    // New multi-ward format
+    const wardKey = `ward${targetWard}`;
+    boundaries = window.WARD_BOUNDARIES[wardKey];
+  }
   
   if (!boundaries) {
     console.error(`No boundaries found for ward ${targetWard}`);
@@ -230,8 +239,17 @@ function initializeMap() {
   if (map) map.remove();
   
   const targetWard = window.TARGET_WARD || '56';
-  const wardKey = `ward${targetWard}`;
-  const boundaries = window.WARD_BOUNDARIES[wardKey];
+  let boundaries;
+  
+  // Handle both old Ward 56 format and new multi-ward format
+  if (window.WARD_BOUNDARIES.ward56 && !window.WARD_BOUNDARIES.ward44) {
+    // Old Ward 56 only format
+    boundaries = window.WARD_BOUNDARIES.ward56;
+  } else {
+    // New multi-ward format
+    const wardKey = `ward${targetWard}`;
+    boundaries = window.WARD_BOUNDARIES[wardKey];
+  }
   
   if (!boundaries) {
     console.error(`No boundaries found for ward ${targetWard}`);
@@ -274,8 +292,17 @@ function addHomeMarker() {
   if (!homeLocation) return;
   
   const targetWard = window.TARGET_WARD || '56';
-  const wardKey = `ward${targetWard}`;
-  const boundaries = window.WARD_BOUNDARIES[wardKey];
+  let boundaries;
+  
+  // new multi-ward format
+  if (window.WARD_BOUNDARIES.ward56 && !window.WARD_BOUNDARIES.ward44) {
+    // Old Ward 56 only format
+    boundaries = window.WARD_BOUNDARIES.ward56;
+  } else {
+    // New multi-ward format
+    const wardKey = `ward${targetWard}`;
+    boundaries = window.WARD_BOUNDARIES[wardKey];
+  }
   
   if (!boundaries) {
     console.error(`No boundaries found for ward ${targetWard}`);
