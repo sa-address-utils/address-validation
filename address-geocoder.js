@@ -136,7 +136,6 @@ function checkEligibility(coords) {
   return isPointInPolygon(coords, boundaries);
 }
 
-
 function displayResults(location, eligible) {
   const resultEl = document.getElementById('addressResult');
   if (!resultEl) return;
