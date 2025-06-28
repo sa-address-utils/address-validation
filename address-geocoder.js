@@ -159,6 +159,17 @@ function displayResults(location, eligible) {
   } else {
     initializeMap();
   }
+  
+  // Auto-scroll to map after a short delay to ensure it's rendered
+  setTimeout(() => {
+    const mapElement = document.getElementById('map');
+    if (mapElement) {
+      mapElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+    }
+  }, 500);
 }
 
 function displayNoResults(data) {
