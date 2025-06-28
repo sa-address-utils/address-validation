@@ -15,7 +15,7 @@ function initializeApp() {
     return;
   }
   
-  console.log('Ward boundary system initialized successfully');
+  console.log(`Ward boundary system initialized successfully for Ward ${window.TARGET_WARD || '56'}`);
   
   // Add event listeners
   const btn = document.getElementById('checkAddressBtn');
@@ -126,12 +126,28 @@ async function findAddress(street, suburb) {
 }
 
 function checkEligibility(coords) {
-  return isPointInPolygon(coords, window.WARD_BOUNDARIES.ward56);
+  const targetWard = window.TARGET_WARD || '56';
+  const wardKey = `ward${targetWard}`;
+  const boundaries = window.WARD_BOUNDARIES[wardKey];
+  
+  console.log('🔍 Checking eligibility for ward:', targetWard);
+  console.log('🔍 Available boundaries:', Object.keys(window.WARD_BOUNDARIES));
+  console.log('🔍 Looking for key:', wardKey);
+  console.log('🔍 Found boundaries:', boundaries ? 'Yes' : 'No');
+  
+  if (!boundaries) {
+    console.error(`No boundaries found for ward ${targetWard}`);
+    return false;
+  }
+  
+  return isPointInPolygon(coords, boundaries);
 }
 
 function displayResults(location, eligible) {
   const resultEl = document.getElementById('addressResult');
   if (!resultEl) return;
+  
+  const targetWard = window.TARGET_WARD || '56';
   
   resultEl.innerHTML = `
     <div class="address-result">
@@ -139,7 +155,7 @@ function displayResults(location, eligible) {
       ${location.address}<br>
       <strong>Coordinates:</strong> ${location.coords[0].toFixed(6)}, ${location.coords[1].toFixed(6)}<br>
       <strong>Ward Status:</strong> <span style="color: ${eligible ? '#4CAF50' : '#f44336'}; font-weight: bold;">
-        ${eligible ? '✅ Inside Ward 56' : '❌ Outside Ward 56'}
+        ${eligible ? `✅ Inside Ward ${targetWard}` : `❌ Outside Ward ${targetWard}`}
       </span>
     </div>
   `;
@@ -197,15 +213,16 @@ async function submitForm(data) {
 
 function showFinalStatus(eligible) {
   const btn = document.getElementById('checkAddressBtn');
+  const targetWard = window.TARGET_WARD || '56';
   
   if (eligible === true) {
     showStatus('✅ Eligibility confirmed!', 'success');
     btn.innerHTML = '✅ Eligible to Vote';
-    alert('🎉 Great news! Your home address is INSIDE Ward 56.\n\nYou ARE eligible to vote in this by-election!');
+    alert(`🎉 Great news! Your home address is INSIDE Ward ${targetWard}.\n\nYou ARE eligible to vote in this by-election!`);
   } else if (eligible === false) {
     showStatus('📝 Not Eligible', 'warning');
-    btn.innerHTML = '❌ Outside Ward 56';
-    alert('📍 Your home address is OUTSIDE Ward 56.\n\nYou are NOT eligible to vote in this by-election.');
+    btn.innerHTML = `❌ Outside Ward ${targetWard}`;
+    alert(`📍 Your home address is OUTSIDE Ward ${targetWard}.\n\nYou are NOT eligible to vote in this by-election.`);
   } else {
     showStatus('📝 Not Found', 'warning');
     btn.innerHTML = '⏳ Pending Verification';
@@ -218,14 +235,30 @@ function initializeMap() {
   
   if (map) map.remove();
   
-  const wardCenter = [-25.755, 28.245];
+  const targetWard = window.TARGET_WARD || '56';
+  const wardKey = `ward${targetWard}`;
+  const boundaries = window.WARD_BOUNDARIES[wardKey];
+  
+  if (!boundaries) {
+    console.error(`No boundaries found for ward ${targetWard}`);
+    return;
+  }
+  
+  // Calculate center of ward boundaries
+  const lats = boundaries.map(coord => coord[0]);
+  const lngs = boundaries.map(coord => coord[1]);
+  const wardCenter = [
+    (Math.min(...lats) + Math.max(...lats)) / 2,
+    (Math.min(...lngs) + Math.max(...lngs)) / 2
+  ];
+  
   map = L.map('map').setView(wardCenter, 13);
   
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
   
-  const polygon = L.polygon(window.WARD_BOUNDARIES.ward56, {
+  const polygon = L.polygon(boundaries, {
     color: '#4CAF50',
     fillColor: '#4CAF50',
     fillOpacity: 0.2,
@@ -241,7 +274,16 @@ function initializeMap() {
 function addHomeMarker() {
   if (!homeLocation) return;
   
-  const inWard = isPointInPolygon(homeLocation, window.WARD_BOUNDARIES.ward56);
+  const targetWard = window.TARGET_WARD || '56';
+  const wardKey = `ward${targetWard}`;
+  const boundaries = window.WARD_BOUNDARIES[wardKey];
+  
+  if (!boundaries) {
+    console.error(`No boundaries found for ward ${targetWard}`);
+    return;
+  }
+  
+  const inWard = isPointInPolygon(homeLocation, boundaries);
   const markerColor = inWard ? '#4CAF50' : '#f44336';
   
   const homeIcon = L.divIcon({
@@ -256,18 +298,19 @@ function addHomeMarker() {
     .addTo(map)
     .bindPopup(`
       <strong>🏠 Your Home Address</strong><br>
-      ${inWard ? '✅ Inside Ward 56' : '❌ Outside Ward 56'}<br>
+      ${inWard ? `✅ Inside Ward ${targetWard}` : `❌ Outside Ward ${targetWard}`}<br>
       <small>${homeLocation[0].toFixed(6)}, ${homeLocation[1].toFixed(6)}</small>
     `)
     .openPopup();
   
-  const polygon = L.polygon(window.WARD_BOUNDARIES.ward56);
+  const polygon = L.polygon(boundaries);
   const group = new L.featureGroup([polygon, homeMarker]);
   map.fitBounds(group.getBounds().pad(0.1));
 }
 
 function addMapLegend() {
   const legend = L.control({position: 'bottomright'});
+  const targetWard = window.TARGET_WARD || '56';
   
   legend.onAdd = function(map) {
     const div = L.DomUtil.create('div', 'legend');
@@ -275,11 +318,11 @@ function addMapLegend() {
       <h4>Legend</h4>
       <div class="legend-item">
         <div class="legend-color" style="background-color: #4CAF50;"></div>
-        <span>Inside Ward 56</span>
+        <span>Inside Ward ${targetWard}</span>
       </div>
       <div class="legend-item">
         <div class="legend-color" style="background-color: #f44336;"></div>
-        <span>Outside Ward 56</span>
+        <span>Outside Ward ${targetWard}</span>
       </div>
     `;
     return div;
@@ -290,6 +333,11 @@ function addMapLegend() {
 
 // Point in polygon algorithm
 function isPointInPolygon(point, polygon) {
+  if (!point || !polygon || !polygon.length) {
+    console.error('Invalid point or polygon data:', { point, polygon });
+    return false;
+  }
+  
   const [lat, lng] = point;
   let inside = false;
   
