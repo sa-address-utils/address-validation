@@ -1,0 +1,44 @@
+{
+  "name": "sa-address-validation",
+  "version": "1.2.4",
+  "description": "Comprehensive JavaScript library for validating and processing South African addresses, postal codes, and municipal boundaries",
+  "main": "address-geocoder.js",
+  "scripts": {
+    "test": "node tests/test-runner.js",
+    "build": "node build.js",
+    "demo": "node examples/basic-usage.js"
+  },
+  "keywords": [
+    "south-africa",
+    "address-validation",
+    "postal-codes",
+    "geocoding",
+    "municipal-boundaries",
+    "gauteng",
+    "pretoria",
+    "tshwane",
+    "ward-boundaries"
+  ],
+  "author": "SA Address Utils Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sa-address-utils/address-validation.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sa-address-utils/address-validation/issues"
+  },
+  "homepage": "https://sa-address-utils.github.io/address-validation",
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "files": [
+    "*.js",
+    "docs/",
+    "examples/",
+    "README.md",
+    "LICENSE"
+  ]
+}
