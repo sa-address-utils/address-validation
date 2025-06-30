@@ -5,7 +5,7 @@
  */
 
 // Application state
-let map, homeMarker, homeLocation = null;
+let map, homeMarker, homeLocation = null, manualMode = false;
 
 // Initialize when called by authenticated system
 function initializeApp() {
@@ -19,6 +19,15 @@ function initializeApp() {
   const btn = document.getElementById('checkAddressBtn');
   if (btn) {
     btn.addEventListener('click', processAddress);
+  }
+  
+  // Add test button for manual mode
+  const testBtn = document.getElementById('testManualBtn');
+  if (testBtn) {
+    testBtn.addEventListener('click', function() {
+      console.log('Test manual mode button clicked');
+      startManualCheck();
+    });
   }
 }
 
@@ -76,10 +85,41 @@ function validateFormData(data) {
   return true;
 }
 
+// Helper function to normalize address case
+function normalizeAddressCase(text) {
+  return text
+    .toLowerCase()
+    .split(' ')
+    .map(word => {
+      // Handle common abbreviations and special cases
+      const upperCaseWords = ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW', 'GP', 'ZA'];
+      if (upperCaseWords.includes(word.toUpperCase())) {
+        return word.toUpperCase();
+      }
+      
+      // Handle ordinal numbers (1st, 2nd, 3rd, etc.)
+      if (/^\d+(st|nd|rd|th)$/.test(word)) {
+        return word;
+      }
+      
+      // Regular title case for most words
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
 async function findAddress(street, suburb) {
-  // Clean inputs to avoid duplication
-  const cleanStreet = street.replace(/, (Pretoria|Gauteng|South Africa).*$/i, '').trim();
-  const cleanSuburb = suburb.replace(/, (Pretoria|Gauteng|South Africa).*$/i, '').trim();
+  console.log('Finding address for (original):', street, suburb);
+  
+  // Clean and normalize case
+  const cleanStreet = normalizeAddressCase(
+    street.replace(/, (Pretoria|Gauteng|South Africa).*$/i, '').trim()
+  );
+  const cleanSuburb = normalizeAddressCase(
+    suburb.replace(/, (Pretoria|Gauteng|South Africa).*$/i, '').trim()
+  );
+  
+  console.log('Normalized addresses:', cleanStreet, cleanSuburb);
   
   const variations = [
     `${cleanStreet}, ${cleanSuburb}, Pretoria, Gauteng, South Africa`,
@@ -90,16 +130,25 @@ async function findAddress(street, suburb) {
     `${cleanSuburb}, Gauteng, South Africa`
   ];
   
+  console.log('Trying address variations:', variations);
+  
   for (let i = 0; i < variations.length; i++) {
     try {
+      console.log(`Attempt ${i+1}: ${variations[i]}`);
+      
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(variations[i])}&limit=3&countrycodes=za&addressdetails=1`,
         { headers: { 'User-Agent': 'Ward-Boundary-Checker/1.0' } }
       );
       
-      if (!response.ok) continue;
+      if (!response.ok) {
+        console.log(`Response not OK: ${response.status}`);
+        continue;
+      }
       
       const data = await response.json();
+      console.log(`Results for attempt ${i+1}:`, data);
+      
       if (data && data.length > 0) {
         const localResults = data.filter(result => {
           const display = result.display_name.toLowerCase();
@@ -107,6 +156,8 @@ async function findAddress(street, suburb) {
         });
         
         const bestResult = localResults.length > 0 ? localResults[0] : data[0];
+        console.log('Best result found:', bestResult);
+        
         return {
           coords: [parseFloat(bestResult.lat), parseFloat(bestResult.lon)],
           address: bestResult.display_name
@@ -117,30 +168,38 @@ async function findAddress(street, suburb) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } catch (error) {
-      console.error(`Address lookup error:`, error);
+      console.error(`Address lookup error on attempt ${i+1}:`, error);
     }
   }
+  
+  console.log('No address found after all attempts');
   return null;
 }
 
 function checkEligibility(coords) {
-  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '44';
   const wardKey = `ward${targetWard}`;
   const boundaries = window.WARD_BOUNDARIES[wardKey];
+  
+  console.log('Checking eligibility for:', coords);
+  console.log('Target ward:', targetWard);
+  console.log('Ward boundaries available:', !!boundaries);
   
   if (!boundaries) {
     console.error(`No boundaries found for ward ${targetWard}`);
     return false;
   }
   
-  return isPointInPolygon(coords, boundaries);
+  const result = isPointInPolygon(coords, boundaries);
+  console.log('Point in polygon result:', result);
+  return result;
 }
 
 function displayResults(location, eligible) {
   const resultEl = document.getElementById('addressResult');
   if (!resultEl) return;
   
-  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '44';
   
   resultEl.innerHTML = `
     <div class="address-result">
@@ -151,8 +210,37 @@ function displayResults(location, eligible) {
         ${eligible ? `✅ Inside Ward ${targetWard}` : `❌ Outside Ward ${targetWard}`}
       </span>
     </div>
+    
+    <div class="address-result" style="border-left-color: #2196F3; background: #e3f2fd; margin-top: 15px;">
+      <strong>🎯 Want to double-check?</strong><br>
+      You can manually verify your exact location on the map below.<br><br>
+      
+      <button type="button" class="manual-check-btn" id="manualCheckButton2">
+        🗺️ Verify Manually on Map
+      </button>
+      
+      <div class="manual-instruction hidden" id="manualInstructions2">
+        <strong>📍 Manual Verification Instructions:</strong><br>
+        1. The map below shows Ward ${targetWard} boundaries (green area)<br>
+        2. Click anywhere on the map to place a marker at your exact home location<br>
+        3. The system will tell you if that location is inside or outside Ward ${targetWard}<br>
+        4. You can click multiple times to adjust the marker position
+      </div>
+    </div>
   `;
   resultEl.classList.remove('hidden');
+  
+  // Show the test manual mode button now that we have a result
+  const testBtn = document.getElementById('testManualBtn');
+  if (testBtn) {
+    testBtn.classList.remove('hidden');
+  }
+  
+  // Add event listener to the manual verification button
+  const manualBtn = document.getElementById('manualCheckButton2');
+  if (manualBtn) {
+    manualBtn.addEventListener('click', startManualCheck);
+  }
   
   if (map) {
     addHomeMarker();
@@ -166,14 +254,179 @@ function displayNoResults(data) {
   const resultEl = document.getElementById('addressResult');
   if (!resultEl) return;
   
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '44';
+  
   resultEl.innerHTML = `
-    <div class="address-result" style="border-left-color: #ff9800; background: #fff3e0;">
+    <div class="address-result warning">
       <strong>⚠️ Address Not Found Automatically</strong><br>
       We couldn't locate "${data.streetAddress}, ${data.suburb}" automatically.<br><br>
-      <em>Please double check or add the City/Town</em>
+      <em>📍 Address lookups are not always 100% accurate</em><br><br>
+      
+      <button type="button" class="manual-check-btn" id="manualCheckButton">
+        🗺️ Check Manually on Map
+      </button>
+      
+      <div class="manual-instruction hidden" id="manualInstructions">
+        <strong>📍 Manual Checking Instructions:</strong><br>
+        1. The map below shows Ward ${targetWard} boundaries (green area)<br>
+        2. Click anywhere on the map to place a marker at your home location<br>
+        3. The system will tell you if that location is inside or outside Ward ${targetWard}<br>
+        4. You can click multiple times to adjust the marker position
+      </div>
     </div>
   `;
   resultEl.classList.remove('hidden');
+  
+  // Show the test manual mode button now that we have a result (even if failed)
+  const testBtn = document.getElementById('testManualBtn');
+  if (testBtn) {
+    testBtn.classList.remove('hidden');
+  }
+  
+  // Add event listener to the manual check button
+  const manualBtn = document.getElementById('manualCheckButton');
+  if (manualBtn) {
+    manualBtn.addEventListener('click', startManualCheck);
+  }
+}
+
+function startManualCheck() {
+  manualMode = true;
+  console.log('Starting manual check mode...');
+  
+  // Show instructions - try both possible instruction divs
+  const instructions = document.getElementById('manualInstructions');
+  const instructions2 = document.getElementById('manualInstructions2');
+  if (instructions) {
+    instructions.classList.remove('hidden');
+  }
+  if (instructions2) {
+    instructions2.classList.remove('hidden');
+  }
+  
+  // Update status
+  showStatus('🗺️ Loading map... Click on the map to place your home marker', 'loading');
+  
+  // Initialize or show map
+  if (map) {
+    console.log('Map exists, enabling manual mode...');
+    // Map already exists, just enable manual mode
+    enableManualMode();
+    // Scroll to map
+    setTimeout(() => {
+      scrollToMap();
+    }, 500);
+  } else {
+    console.log('Initializing new map...');
+    // Initialize map first
+    initializeMap();
+  }
+}
+
+function enableManualMode() {
+  if (!map) {
+    console.error('Map not initialized for manual mode');
+    return;
+  }
+  
+  console.log('Enabling manual mode...');
+  
+  // Remove any existing click handlers
+  map.off('click');
+  
+  // Add new click handler for manual selection
+  map.on('click', function(e) {
+    console.log('Map clicked at:', e.latlng);
+    
+    const coords = [e.latlng.lat, e.latlng.lng];
+    homeLocation = coords;
+    
+    // Check eligibility for clicked location
+    const eligible = checkEligibility(coords);
+    console.log('Eligibility check result:', eligible);
+    
+    // Add/update marker
+    addManualMarker(coords, eligible);
+    
+    // Show result
+    displayManualResult(coords, eligible);
+    
+    // Submit form with manual coordinates
+    const formData = getFormData();
+    submitForm({
+      ...formData, 
+      location: { coords: coords, address: 'Manually selected on map' }, 
+      eligible: eligible
+    });
+  });
+  
+  // Change cursor to crosshair when in manual mode
+  const mapContainer = document.getElementById('map');
+  if (mapContainer) {
+    mapContainer.style.cursor = 'crosshair';
+  }
+  
+  // Update status
+  showStatus('🎯 Click anywhere on the map to place your home marker', 'loading');
+  
+  // Update legend to show manual mode
+  addMapLegend();
+}
+
+function addManualMarker(coords, eligible) {
+  console.log('Adding manual marker at:', coords, 'Eligible:', eligible);
+  
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '44';
+  const markerColor = eligible ? '#4CAF50' : '#f44336';
+  
+  const homeIcon = L.divIcon({
+    html: `<div style="background-color: ${markerColor}; width: 24px; height: 24px; border-radius: 20% 20% 20% 70%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transform: rotate(-45deg);"></div>`,
+    iconSize: [24, 24],
+    className: 'custom-marker'
+  });
+  
+  if (homeMarker) {
+    map.removeLayer(homeMarker);
+  }
+  
+  homeMarker = L.marker(coords, { icon: homeIcon })
+    .addTo(map)
+    .bindPopup(`
+      <strong>🏠 Your Selected Location</strong><br>
+      ${eligible ? `✅ Inside Ward ${targetWard}` : `❌ Outside Ward ${targetWard}`}<br>
+      <small>${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}</small><br>
+      <em>Click elsewhere to move marker</em>
+    `, { autoClose: false })
+    .openPopup();
+}
+
+function displayManualResult(coords, eligible) {
+  console.log('Displaying manual result:', eligible);
+  
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '44';
+  
+  showStatus(
+    eligible ? 
+    `✅ Selected location is INSIDE Ward ${targetWard}! You are eligible to vote.` : 
+    `❌ Selected location is OUTSIDE Ward ${targetWard}. You are not eligible to vote.`,
+    eligible ? 'success' : 'error'
+  );
+  
+  // Update button
+  const btn = document.getElementById('checkAddressBtn');
+  if (btn) {
+    btn.innerHTML = eligible ? '✅ Eligible to Vote' : `❌ Outside Ward ${targetWard}`;
+    btn.disabled = false;
+  }
+  
+  // Show an alert with the result
+  setTimeout(() => {
+    if (eligible) {
+      alert(`🎉 Great news! Your selected location is INSIDE Ward ${targetWard}.\n\nYou ARE eligible to vote in this by-election!`);
+    } else {
+      alert(`📍 Your selected location is OUTSIDE Ward ${targetWard}.\n\nYou are NOT eligible to vote in this by-election.`);
+    }
+  }, 500);
 }
 
 async function submitForm(data) {
@@ -206,8 +459,13 @@ async function submitForm(data) {
 }
 
 function showFinalStatus(eligible) {
+  if (manualMode) {
+    console.log('Skipping final status in manual mode');
+    return; // Don't override manual mode status
+  }
+  
   const btn = document.getElementById('checkAddressBtn');
-  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '44';
   
   if (eligible === true) {
     showStatus('✅ Eligibility confirmed!', 'success');
@@ -218,10 +476,11 @@ function showFinalStatus(eligible) {
     btn.innerHTML = `❌ Outside Ward ${targetWard}`;
     alert(`📍 Your home address is OUTSIDE Ward ${targetWard}.\n\nYou are NOT eligible to vote in this by-election.`);
   } else {
-    showStatus('📝 Not Found', 'warning');
-    btn.innerHTML = '⏳ Pending Verification';
-    alert('📋 Your Address could not be found Automatically.\n\nPlease contact someone at a voting station to confirm');
+    showStatus('📝 Address lookup failed - try manual check', 'warning');
+    btn.innerHTML = '🗺️ Try Manual Check';
   }
+  
+  btn.disabled = false;
 }
 
 function initializeMap() {
@@ -229,7 +488,7 @@ function initializeMap() {
   
   if (map) map.remove();
   
-  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '44';
   const wardKey = `ward${targetWard}`;
   const boundaries = window.WARD_BOUNDARIES[wardKey];
   
@@ -264,8 +523,12 @@ function initializeMap() {
   
   if (homeLocation) addHomeMarker();
   
-  // Scroll to map after it's fully loaded
+  // Wait for map to be ready, then enable manual mode if needed
   map.whenReady(() => {
+    if (manualMode) {
+      console.log('Map ready, enabling manual mode...');
+      enableManualMode();
+    }
     scrollToMap();
   });
 }
@@ -273,7 +536,7 @@ function initializeMap() {
 function addHomeMarker() {
   if (!homeLocation) return;
   
-  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '44';
   const wardKey = `ward${targetWard}`;
   const boundaries = window.WARD_BOUNDARIES[wardKey];
   
@@ -309,7 +572,7 @@ function addHomeMarker() {
 
 function addMapLegend() {
   const legend = L.control({position: 'bottomright'});
-  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '56';
+  const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '44';
   
   legend.onAdd = function(map) {
     const div = L.DomUtil.create('div', 'legend');
@@ -323,6 +586,7 @@ function addMapLegend() {
         <div class="legend-color" style="background-color: #f44336;"></div>
         <span>Outside Ward ${targetWard}</span>
       </div>
+      ${manualMode ? '<p style="margin: 5px 0; font-size: 12px;"><em>Click map to place marker</em></p>' : ''}
     `;
     return div;
   };
