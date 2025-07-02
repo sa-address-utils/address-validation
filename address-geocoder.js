@@ -212,19 +212,19 @@ function displayResults(location, eligible) {
     </div>
     
     <div class="address-result" style="border-left-color: #2196F3; background: #e3f2fd; margin-top: 15px;">
-      <strong>🎯 Want to double-check?</strong><br>
-      You can manually verify your exact location on the map below.<br><br>
+      <strong>🎯 Want to double-check visually?</strong><br>
+      View the map below to see your location relative to Ward ${targetWard} boundaries.<br><br>
       
       <button type="button" class="manual-check-btn" id="manualCheckButton2">
-        🗺️ Verify Manually on Map
+        🗺️ Verify Visually on Map
       </button>
       
       <div class="manual-instruction hidden" id="manualInstructions2">
-        <strong>📍 Manual Verification Instructions:</strong><br>
-        1. The map below shows Ward ${targetWard} boundaries (green area)<br>
-        2. Click anywhere on the map to place a marker at your exact home location<br>
-        3. The system will tell you if that location is inside or outside Ward ${targetWard}<br>
-        4. You can click multiple times to adjust the marker position
+        <strong>📍 Visual Verification:</strong><br>
+        1. The map shows Ward ${targetWard} boundaries (green area)<br>
+        2. Click anywhere on the map to see if that location is inside or outside the ward<br>
+        3. Green markers = Inside Ward, Red markers = Outside Ward<br>
+        4. This is just for visual confirmation - no data is submitted
       </div>
     </div>
   `;
@@ -263,15 +263,15 @@ function displayNoResults(data) {
       <em>📍 Address lookups are not always 100% accurate</em><br><br>
       
       <button type="button" class="manual-check-btn" id="manualCheckButton">
-        🗺️ Check Manually on Map
+        🗺️ Check Visually on Map
       </button>
       
       <div class="manual-instruction hidden" id="manualInstructions">
-        <strong>📍 Manual Checking Instructions:</strong><br>
-        1. The map below shows Ward ${targetWard} boundaries (green area)<br>
-        2. Click anywhere on the map to place a marker at your home location<br>
-        3. The system will tell you if that location is inside or outside Ward ${targetWard}<br>
-        4. You can click multiple times to adjust the marker position
+        <strong>📍 Visual Checking:</strong><br>
+        1. The map shows Ward ${targetWard} boundaries (green area)<br>
+        2. Click anywhere on the map to see if that location is inside or outside the ward<br>
+        3. Green markers = Inside Ward, Red markers = Outside Ward<br>
+        4. Use this to visually confirm your eligibility
       </div>
     </div>
   `;
@@ -305,7 +305,7 @@ function startManualCheck() {
   }
   
   // Update status
-  showStatus('🗺️ Loading map... Click on the map to place your home marker', 'loading');
+  showStatus('🗺️ Loading map... Click anywhere to check if that location is inside Ward boundaries', 'loading');
   
   // Initialize or show map
   if (map) {
@@ -348,16 +348,8 @@ function enableManualMode() {
     // Add/update marker
     addManualMarker(coords, eligible);
     
-    // Show result
+    // Show result (no form submission)
     displayManualResult(coords, eligible);
-    
-    // Submit form with manual coordinates
-    const formData = getFormData();
-    submitForm({
-      ...formData, 
-      location: { coords: coords, address: 'Manually selected on map' }, 
-      eligible: eligible
-    });
   });
   
   // Change cursor to crosshair when in manual mode
@@ -367,7 +359,7 @@ function enableManualMode() {
   }
   
   // Update status
-  showStatus('🎯 Click anywhere on the map to place your home marker', 'loading');
+  showStatus('🎯 Click anywhere on the map to check eligibility for that location', 'loading');
   
   // Update legend to show manual mode
   addMapLegend();
@@ -392,10 +384,10 @@ function addManualMarker(coords, eligible) {
   homeMarker = L.marker(coords, { icon: homeIcon })
     .addTo(map)
     .bindPopup(`
-      <strong>🏠 Your Selected Location</strong><br>
+      <strong>📍 Checked Location</strong><br>
       ${eligible ? `✅ Inside Ward ${targetWard}` : `❌ Outside Ward ${targetWard}`}<br>
       <small>${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}</small><br>
-      <em>Click elsewhere to move marker</em>
+      <em>Click elsewhere to check another location</em>
     `, { autoClose: false })
     .openPopup();
 }
@@ -407,26 +399,10 @@ function displayManualResult(coords, eligible) {
   
   showStatus(
     eligible ? 
-    `✅ Selected location is INSIDE Ward ${targetWard}! You are eligible to vote.` : 
-    `❌ Selected location is OUTSIDE Ward ${targetWard}. You are not eligible to vote.`,
+    `✅ That location is INSIDE Ward ${targetWard}! Click elsewhere to check other locations.` : 
+    `❌ That location is OUTSIDE Ward ${targetWard}. Click elsewhere to check other locations.`,
     eligible ? 'success' : 'error'
   );
-  
-  // Update button
-  const btn = document.getElementById('checkAddressBtn');
-  if (btn) {
-    btn.innerHTML = eligible ? '✅ Eligible to Vote' : `❌ Outside Ward ${targetWard}`;
-    btn.disabled = false;
-  }
-  
-  // Show an alert with the result
-  setTimeout(() => {
-    if (eligible) {
-      alert(`🎉 Great news! Your selected location is INSIDE Ward ${targetWard}.\n\nYou ARE eligible to vote in this by-election!`);
-    } else {
-      alert(`📍 Your selected location is OUTSIDE Ward ${targetWard}.\n\nYou are NOT eligible to vote in this by-election.`);
-    }
-  }, 500);
 }
 
 async function submitForm(data) {
@@ -476,8 +452,8 @@ function showFinalStatus(eligible) {
     btn.innerHTML = `❌ Outside Ward ${targetWard}`;
     alert(`📍 Your home address is OUTSIDE Ward ${targetWard}.\n\nYou are NOT eligible to vote in this by-election.`);
   } else {
-    showStatus('📝 Address lookup failed - try manual check', 'warning');
-    btn.innerHTML = '🗺️ Try Manual Check';
+    showStatus('📝 Address lookup failed - try visual check below', 'warning');
+    btn.innerHTML = '🗺️ Try Visual Check';
   }
   
   btn.disabled = false;
@@ -586,7 +562,7 @@ function addMapLegend() {
         <div class="legend-color" style="background-color: #f44336;"></div>
         <span>Outside Ward ${targetWard}</span>
       </div>
-      ${manualMode ? '<p style="margin: 5px 0; font-size: 12px;"><em>Click map to place marker</em></p>' : ''}
+      ${manualMode ? '<p style="margin: 5px 0; font-size: 12px;"><em>Click map to check any location</em></p>' : ''}
     `;
     return div;
   };
