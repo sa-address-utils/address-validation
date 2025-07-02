@@ -5,7 +5,7 @@
  */
 
 // Application state
-let map, homeMarker, homeLocation = null, manualMode = false;
+let map, homeMarker, homeLocation = null, manualMode = false, mapLegend = null;
 
 // Initialize when called by authenticated system
 function initializeApp() {
@@ -361,7 +361,7 @@ function enableManualMode() {
   // Update status
   showStatus('🎯 Click anywhere on the map to check eligibility for that location', 'loading');
   
-  // Update legend to show manual mode
+  // Update legend to show manual mode (only if not already showing)
   addMapLegend();
 }
 
@@ -446,14 +446,15 @@ function showFinalStatus(eligible) {
   if (eligible === true) {
     showStatus('✅ Eligibility confirmed!', 'success');
     btn.innerHTML = '✅ Eligible to Vote';
-    alert(`🎉 Great news! Your home address is INSIDE Ward ${targetWard}.\n\nYou ARE eligible to vote in this by-election!`);
+    // Removed popup alert - user can see result on page
   } else if (eligible === false) {
     showStatus('📝 Not Eligible', 'warning');
     btn.innerHTML = `❌ Outside Ward ${targetWard}`;
-    alert(`📍 Your home address is OUTSIDE Ward ${targetWard}.\n\nYou are NOT eligible to vote in this by-election.`);
+    // Removed popup alert - user can see result on page
   } else {
     showStatus('📝 Address lookup failed - try visual check below', 'warning');
     btn.innerHTML = '🗺️ Try Visual Check';
+    // Removed popup alert - user can see result on page
   }
   
   btn.disabled = false;
@@ -462,7 +463,14 @@ function showFinalStatus(eligible) {
 function initializeMap() {
   document.getElementById('map').classList.remove('hidden');
   
-  if (map) map.remove();
+  if (map) {
+    // Clean up existing legend before removing map
+    if (mapLegend) {
+      map.removeControl(mapLegend);
+      mapLegend = null;
+    }
+    map.remove();
+  }
   
   const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '44';
   const wardKey = `ward${targetWard}`;
@@ -546,11 +554,20 @@ function addHomeMarker() {
   map.fitBounds(group.getBounds().pad(0.1));
 }
 
+// Global legend variable to track and prevent duplicates
+let mapLegend = null;
+
 function addMapLegend() {
-  const legend = L.control({position: 'bottomright'});
+  // Remove existing legend if it exists
+  if (mapLegend) {
+    map.removeControl(mapLegend);
+  }
+  
   const targetWard = window.TARGET_WARD || document.querySelector('meta[name="target-ward"]')?.content || '44';
   
-  legend.onAdd = function(map) {
+  mapLegend = L.control({position: 'bottomright'});
+  
+  mapLegend.onAdd = function(map) {
     const div = L.DomUtil.create('div', 'legend');
     div.innerHTML = `
       <h4>Legend</h4>
@@ -567,7 +584,7 @@ function addMapLegend() {
     return div;
   };
   
-  legend.addTo(map);
+  mapLegend.addTo(map);
 }
 
 // Point in polygon algorithm
