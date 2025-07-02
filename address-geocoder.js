@@ -554,9 +554,6 @@ function addHomeMarker() {
   map.fitBounds(group.getBounds().pad(0.1));
 }
 
-// Global legend variable to track and prevent duplicates
-let mapLegend = null;
-
 function addMapLegend() {
   // Remove existing legend if it exists
   if (mapLegend) {
