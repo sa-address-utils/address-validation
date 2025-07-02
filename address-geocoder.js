@@ -222,9 +222,9 @@ function displayResults(location, eligible) {
       <div class="manual-instruction hidden" id="manualInstructions2">
         <strong>📍 Visual Verification:</strong><br>
         1. The map shows Ward ${targetWard} boundaries (green area)<br>
-        2. Click anywhere on the map to see if that location is inside or outside the ward<br>
+        2. Click and Zoom anywhere on the map to see if that location is inside or outside the ward<br>
         3. Green markers = Inside Ward, Red markers = Outside Ward<br>
-        4. This is just for visual confirmation - no data is submitted
+        4. This is just for visual confirmation - Please Contact Officials with Queries
       </div>
     </div>
   `;
